@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' blob: http://127.0.0.1:* 'wasm-unsafe-eval'; worker-src blob:; connect-src 'self' http://127.0.0.1:*; img-src 'self' data: file:; media-src 'self' file:; style-src 'self' 'unsafe-inline'">
+<title>ClipForge</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">ClipForge</div>
+  <button id="homeBtn" title="Home: projects and settings">Home</button>
+  <button id="newBtn" title="New project">New</button>
+  <button id="openBtn" title="Open project (Ctrl+O)">Open</button>
+  <button id="saveBtn" title="Save project (Ctrl+S)">Save</button>
+  <button id="saveAsBtn" title="Save as (Ctrl+Shift+S)">Save as</button>
+  <span id="projName" class="hint-inline"></span>
+  <div class="spacer"></div>
+  <select id="aspect" title="Canvas ratio">
+    <option value="16:9">16:9</option>
+    <option value="9:16">9:16</option>
+    <option value="1:1">1:1</option>
+    <option value="4:5">4:5</option>
+  </select>
+  <button id="undo" title="Undo (Ctrl+Z)">Undo</button>
+  <button id="redo" title="Redo (Ctrl+Y)">Redo</button>
+  <button id="exportBtn" class="primary">Export</button>
+</header>
+
+<main>
+  <section id="bin" class="panel">
+    <div class="panel-h">Media <button id="importBtn" class="sm">+ Import</button></div>
+    <div id="binList" class="bin-list"><div class="hint">Import or drop video / image files here</div></div>
+  </section>
+
+  <section id="player" class="panel">
+    <div id="stageWrap">
+      <div id="stage">
+        <video id="vid2" playsinline></video>
+        <video id="vid" playsinline></video>
+        <img id="img" alt="">
+        <div id="ovMedia"></div>
+        <div id="overlay"></div>
+        <div id="grid" hidden></div>
+      </div>
+    </div>
+    <div class="transport">
+      <span id="timeLbl" class="mono">00:00.0 / 00:00.0</span>
+      <button id="gridBtn" class="sm" title="Toggle grid (G)"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3h18v18H3zm2 2v4h4V5zm6 0v4h2V5zm4 0v4h4V5zM5 11v2h4v-2zm6 0v2h2v-2zm4 0v2h4v-2zM5 15v4h4v-4zm6 0v4h2v-4zm4 0v4h4v-4z" fill-rule="evenodd"/></svg>Grid</button>
+      <div class="spacer"></div>
+      <button id="toStart" title="Go to start"><svg class="ic" viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button id="playBtn" class="play" title="Play / Pause (Space)"><svg class="ic" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></svg></button>
+      <button id="toEnd" title="Go to end"><svg class="ic" viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg></button>
+      <div class="spacer"></div>
+      <span class="hint-inline"><svg class="ic" viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9z"/><path d="M15.5 8.5a5 5 0 010 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+      <input id="master" type="range" min="0" max="100" value="100" title="Preview volume">
+      <span class="hint-inline">Zoom</span>
+      <input id="zoom" type="range" min="2" max="300" value="60">
+      <button id="fitBtn" class="sm" title="Fit the whole timeline in view (Shift+Z)">Fit</button>
+    </div>
+  </section>
+
+  <section id="inspector" class="panel">
+    <div class="panel-h">Inspector</div>
+    <div id="insBody"></div>
+  </section>
+</main>
+
+<section id="timelinePanel">
+  <div class="tl-tools">
+    <button id="splitBtn" title="Split at playhead (S)"><svg class="ic" viewBox="0 0 24 24"><path d="M11 3h2v18h-2zM4 8l5 4-5 4zM20 8l-5 4 5 4z"/></svg>Split</button>
+    <button id="freezeBtn" title="Freeze frame at playhead (F)"><svg class="ic" viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4zM20 4v6h-2V6h-4V4zM4 20v-6h2v4h4v2zM20 20h-6v-2h4v-4h2z"/><circle cx="12" cy="12" r="3"/></svg>Freeze</button>
+    <button id="delBtn" title="Delete selected (Del)"><svg class="ic" viewBox="0 0 24 24"><path d="M9 3h6l1 2h4v2H4V5h4zM6 9h12l-1 12H7z"/></svg>Delete</button>
+    <button id="addTextBtn" title="Add text at playhead (T)"><svg class="ic" viewBox="0 0 24 24"><path d="M5 5h14v4h-2V7h-4v10h2v2H9v-2h2V7H7v2H5z"/></svg>Text</button>
+    <button id="capBtn" title="Write captions from the speech in the selected clip (or all clips)"><svg class="ic" viewBox="0 0 24 24"><path d="M4 4h16a2 2 0 012 2v10a2 2 0 01-2 2h-9l-5 4v-4H4a2 2 0 01-2-2V6a2 2 0 012-2zm3 5v2h4V9zm0 3v2h7v-2zm6-3v2h4V9z"/></svg>Auto-captions</button>
+    <span id="capStatus" class="hint-inline"></span>
+  </div>
+  <div id="tl">
+    <div id="tlInner">
+      <div id="ruler"></div>
+      <div class="track" id="trackV"><div class="lbl">Video</div></div>
+      <div class="track" id="trackV2"><div class="lbl">Video 2</div></div>
+      <div class="track" id="trackO"><div class="lbl">Overlay</div></div>
+      <div class="track" id="trackA"><div class="lbl">Audio</div></div>
+      <div class="track" id="trackT"><div class="lbl">Text</div></div>
+      <div id="snapLine"></div>
+      <div id="playhead"><div class="head"></div></div>
+    </div>
+  </div>
+</section>
+
+<div id="transPop" hidden></div>
+
+<div id="modal" class="modal hidden">
+  <div class="card">
+    <h3>Export video</h3>
+    <label>Resolution
+      <select id="quality">
+        <option value="720">720p</option>
+        <option value="1080">1080p</option>
+        <option value="1440">1440p</option>
+        <option value="2160">4K</option>
+      </select>
+    </label>
+    <label>Frame rate
+      <select id="fps"><option value="24">24 fps</option><option value="30" selected>30 fps</option><option value="60">60 fps</option></select>
+    </label>
+    <label>Quality
+      <select id="crf"><option value="16">High (large file)</option><option value="20" selected>Balanced</option><option value="26">Small file</option></select>
+    </label>
+    <div id="expStatus" class="hint"></div>
+    <div class="bar"><div id="bar"></div></div>
+    <div class="row">
+      <button id="expCancel">Close</button>
+      <button id="expGo" class="primary">Choose file & export</button>
+    </div>
+  </div>
+</div>
+
+<div id="home">
+  <aside class="hs">
+    <div class="brand big">ClipForge</div>
+    <button class="hn on" data-pg="pgHome">Home</button>
+    <button class="hn" data-pg="pgSet">Settings</button>
+    <div class="spacer"></div>
+    <button id="homeBack" class="hn" hidden>&larr; Back to editor</button>
+  </aside>
+  <section class="hm">
+    <div id="pgHome" class="pg">
+      <div class="hero">
+        <button id="hCreate" class="hcard create"><svg class="ic" viewBox="0 0 24 24"><path d="M11 4h2v7h7v2h-7v7h-2v-7H4v-2h7z"/></svg>Create project</button>
+        <button id="hOpen" class="hcard"><svg class="ic" viewBox="0 0 24 24"><path d="M3 5h7l2 2h9v12H3z"/></svg>Open project</button>
+      </div>
+      <h2>Projects</h2>
+      <div id="pList" class="pgrid"></div>
+    </div>
+    <div id="pgSet" class="pg" hidden>
+      <h2>Settings</h2>
+      <h3>Theme</h3>
+      <div id="themes" class="themes"></div>
+      <h3>New projects</h3>
+      <div class="srow"><div>Canvas ratio<small>Used when you create a project</small></div><select id="sAspect"><option value="16:9">16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option><option value="4:5">4:5</option></select></div>
+      <h3>Export</h3>
+      <div class="srow"><div>Default resolution</div><select id="sQual"><option value="720">720p</option><option value="1080">1080p</option><option value="1440">1440p</option><option value="2160">4K</option></select></div>
+      <div class="srow"><div>Default frame rate</div><select id="sFps"><option value="24">24 fps</option><option value="30">30 fps</option><option value="60">60 fps</option></select></div>
+      <h3>General</h3>
+      <div class="srow"><div>Autosave<small>Keeps a recovery copy in case of a crash</small></div><select id="sAuto"><option value="0">Off</option><option value="10">Every 10 seconds</option><option value="30">Every 30 seconds</option><option value="60">Every minute</option></select></div>
+      <div class="srow"><div>Show this home screen on startup</div><input id="sHome" type="checkbox"></div>
+      <div class="srow"><div>Recent projects<small>Only clears the list, never your files</small></div><button id="sClear">Clear list</button></div>
+    </div>
+  </section>
+</div>
+
+<script src="renderer.js"></script>
+<script src="captions.js"></script>
+<script src="home.js"></script>
+</body>
+</html>
